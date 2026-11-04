@@ -210,13 +210,12 @@ details.settings summary { cursor: pointer; font-family: var(--font-display); fo
       <h2 id="prev-h">ภาพที่จะส่งเข้า LINE</h2>
       <img id="preview" alt="การ์ดสถิติผู้เข้ารับบริการประจำวัน" width="859" height="668">
       <div class="actions">
-        <a class="btn line" id="line-link" href="#" target="_blank" rel="noopener">ส่งข้อความเข้า LINE</a>
-        <button class="btn primary" type="button" id="save-img" hidden>บันทึกรูปภาพ</button>
+        <button class="btn line" type="button" id="save-img">บันทึกภาพ</button>
         <button class="btn" type="button" id="copy-img">คัดลอกรูป</button>
         <button class="btn" type="button" id="copy-text">คัดลอกข้อความ</button>
         <button class="btn" type="button" id="save-hist">บันทึกลงประวัติ</button>
       </div>
-      <p class="hint" id="share-tip">ปุ่มสีเขียวส่งสรุปเป็นข้อความ หากต้องการส่งเป็นรูป ให้กดบันทึกรูปภาพ (หรือกดค้างที่รูป) แล้วแนบในแชต LINE ระบบจะรอให้ฟอนต์โหลดครบก่อนสร้างรูปทุกครั้ง ตัวอักษรจึงไม่เพี้ยนบนมือถือ การส่งหรือบันทึกรูปจะเก็บยอดของวันนั้นลงประวัติให้ด้วย</p>
+      <p class="hint" id="share-tip">ปุ่มสีเขียวบันทึกการ์ดเป็นรูปภาพ PNG ลงเครื่อง (หรือกดค้างที่รูปเพื่อบันทึก) แล้วนำไปแนบในแชต LINE ได้ ระบบจะรอให้ฟอนต์โหลดครบก่อนสร้างรูปทุกครั้ง ตัวอักษรจึงไม่เพี้ยนบนมือถือ การบันทึกรูปจะเก็บยอดของวันนั้นลงประวัติให้ด้วย</p>
     </section>
 
     <section class="panel style-panel" aria-labelledby="style-h">
@@ -763,7 +762,6 @@ details.settings summary { cursor: pointer; font-family: var(--font-display); fo
     var t = num(state.a) + num(state.b) + num(state.c);
     $("total").textContent = fmt(t);
     $("office-sub").textContent = settings.line1 + " " + settings.line2;
-    $("line-link").href = "https://line.me/R/msg/text/?" + encodeURIComponent(summary());
     var rec = history[state.date];
     $("date-note").textContent = rec ? "วันนี้มีบันทึกไว้แล้ว กดบันทึกอีกครั้งเพื่อแทนที่" : "ยังไม่ได้บันทึกยอดของวันนี้";
     scheduleDraw();
@@ -953,25 +951,30 @@ details.settings summary { cursor: pointer; font-family: var(--font-display); fo
   });
 
   $("save-hist").addEventListener("click", function () { saveHistory(false); });
-  $("line-link").addEventListener("click", function () { saveHistory(true); });
   $("copy-text").addEventListener("click", function () {
     copyText(summary()).then(function (ok) { toast(ok ? "คัดลอกข้อความแล้ว วางในแชต LINE ได้เลย" : "คัดลอกไม่ได้ กรุณาเลือกข้อความด้วยตนเอง"); });
   });
   $("copy-img").addEventListener("click", function () {
-    if (!(navigator.clipboard && window.ClipboardItem)) { toast("เบราว์เซอร์นี้คัดลอกรูปไม่ได้ ให้ใช้ปุ่มบันทึกรูปภาพหรือกดค้างที่รูป"); return; }
+    if (!(navigator.clipboard && window.ClipboardItem)) { toast("เบราว์เซอร์นี้คัดลอกรูปไม่ได้ ให้ใช้ปุ่มบันทึกภาพหรือกดค้างที่รูป"); return; }
     var item = new ClipboardItem({ "image/png": canvasBlob() });
     navigator.clipboard.write([item]).then(function () { toast("คัดลอกรูปแล้ว วางในแชต LINE ได้เลย"); },
-      function () { toast("คัดลอกรูปไม่ได้ ให้ใช้ปุ่มบันทึกรูปภาพหรือกดค้างที่รูป"); });
+      function () { toast("คัดลอกรูปไม่ได้ ให้ใช้ปุ่มบันทึกภาพหรือกดค้างที่รูป"); });
   });
   $("save-img").addEventListener("click", function () {
-    if (!downloads) return;
     canvasBlob().then(function (blob) {
-      return downloads.save({ filename: "dlt-klaeng-stat-" + state.date + ".png", data: blob });
-    }).then(function () { saveHistory(true); toast("บันทึกรูปภาพแล้ว"); },
-      function (err) {
-        if (err && err.code === "declined") return;
-        toast("บันทึกรูปไม่สำเร็จ ลองกดค้างที่รูปเพื่อบันทึก");
-      });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "dlt-klaeng-stat-" + state.date + ".png";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      saveHistory(true);
+      toast("บันทึกภาพแล้ว");
+    }, function () {
+      toast("บันทึกรูปไม่สำเร็จ ลองกดค้างที่รูปเพื่อบันทึก");
+    });
   });
   $("csv").addEventListener("click", function () {
     if (!downloads) return;
@@ -1055,7 +1058,6 @@ details.settings summary { cursor: pointer; font-family: var(--font-display); fo
       window.claude.use("downloads").then(function (d) {
         if (!d) return;
         downloads = d;
-        $("save-img").hidden = false;
         renderHistory();
       }, function () {});
     }
